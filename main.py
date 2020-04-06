@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Apr  1 23:19:52 2020
-
 @author: justi
 """
 import numpy as np
@@ -39,9 +38,10 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
     for i in features1:
         maxCC = 0
         matchingCords = [-1,-1]
+        f1 = getIntensityAvg(img1, windowSize, i[0], i[1])
         for j in features2:
             if abs(j[1]-i[1]) < 11:
-                   newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1])
+                   newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
                    if newCC > maxCC:
                        maxCC = newCC
                        matchingCords = [j[1],j[0]]
@@ -108,13 +108,16 @@ def getInterest(img,windowSize, x,y):
      
     return I
 
-def getCC(imgL,imgR,windowSize, xL,yL,xR,yR):
+def getCC(imgL,imgR,windowSize, xL,yL,xR,yR,f1):
     CC = -1
     sumNumerator = 0
     sumDenomenator  = 0
     sumF1 = 0
     sumF2 = 0
-    f1Avg = getIntensityAvg(imgL,windowSize,xL,yL)
+    if f1==None:
+        f1Avg = getIntensityAvg(imgL,windowSize,xL,yL)
+    else:
+        f1Avg = f1
     f2Avg = getIntensityAvg(imgR,windowSize,xR,yR)
     for i in range(0,windowSize):
         

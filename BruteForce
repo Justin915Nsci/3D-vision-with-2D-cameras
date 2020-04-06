@@ -1,0 +1,102 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr  6 17:39:31 2020
+
+@author: justi
+"""
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+
+def main():
+    imgL = cv2.imread('pics/im0.jpg',1)
+    imgR = cv2.imread('pics/im1.jpg',1)
+    
+   
+    imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
+    imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
+    #cv2.imshow('imgL_gry',imgL_gry)
+    #cv2.waitKey(0)
+    windowSize = 6
+    
+    dMap = getDisparityMap(imgL_gry,imgR_gry,windowSize)
+    print(dMap)
+    f = open("disparityMap.txt","w")
+    for i in dMap:
+        f.write(str(i))
+    f.close()
+    
+    
+def getDisparityMap(img1,img2,windowSize):
+    disparityMap = []
+    for i in range(0,len(img1)):
+        disparityMap = disparityMap + [np.zeros(len(img1[i]))]
+    x_c = windowSize
+    y_c = windowSize
+    #here x_c is i and y_c is j
+    for j in range(y_c,len(img1)-windowSize*2,1):
+        for i in range(x_c,len(img1[j]) - windowSize*2,1):
+            maxCC = 0
+            matchingCords = [-1,-1]
+            x1 = i - windowSize//2
+            y1 = j - windowSize//2
+            
+            
+            x2 = 0
+            y2 = y1 - windowSize//2
+            print("x_c is " + str(i))
+            print("y_c is " + str(j))
+            
+            #look at pixels in image2 which satisfy epipolar constraint
+            for m in range(y2,y2+windowSize,1):
+                for k in range(x2,len(img2[m])-windowSize,1):
+                    newCC = getCC(img1,img2,windowSize,x1,y1,x2,y2)
+                    if newCC > maxCC:
+                       maxCC = newCC
+                       matchingCords = [k+windowSize//2,m+windowSize//2] #[x,y]
+            dx = abs(i - matchingCords[0])
+            disparityMap[j][i] = dx
+            
+    
+                
+    return disparityMap
+
+        
+def getCC(imgL,imgR,windowSize, xL,yL,xR,yR):
+    CC = -1
+    sumNumerator = 0
+    sumDenomenator  = 0
+    sumF1 = 0
+    sumF2 = 0
+    f1Avg = getIntensityAvg(imgL,windowSize,xL,yL)
+    f2Avg = getIntensityAvg(imgR,windowSize,xR,yR)
+    for i in range(0,windowSize):
+        
+        for j in range(0,windowSize):
+            sumF1 += (imgL[yL+i][xL+j]-f1Avg)**2
+            sumF2 += (imgR[yR+i][xR+j]-f2Avg)**2
+            temp = (imgL[yL+i][xL+j]-f1Avg)*(imgR[yR+i][xR+i]-f2Avg)
+
+            sumNumerator += temp
+    sumDenomenator = np.sqrt(sumF1*sumF2)
+    CC = sumNumerator/sumDenomenator
+    #print(type(sumNumerator))
+    #print("CC is " + str(CC))
+    
+    
+    return CC
+
+def getIntensityAvg(img,windowSize,x,y):
+    avg = 0
+   #numPixels = len(img)*len(img[0])
+    
+    #print("pixel intensity is " + str(img[x][y]))
+    numPixels = windowSize*windowSize
+    for i in range(x,x+windowSize):
+        for j in range(y,y+windowSize):
+            avg = avg + img[j][i]
+    avg = avg/numPixels    
+    return avg
+
+main()

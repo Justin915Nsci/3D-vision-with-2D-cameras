@@ -6,12 +6,14 @@ Created on Wed Apr  1 23:19:52 2020
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 
 
 def main():
-    imgL = cv2.imread('pics/im0.jpg',1)
-    imgR = cv2.imread('pics/im1.jpg',1)
-    
+    imgL = cv2.imread('pics/im0.png',1)
+    imgR = cv2.imread('pics/im1.png',1)
+    #imgL = cv2.imread('pics/im0.jpg',1)
+    #imgR = cv2.imread('pics/im1.jpg',1)
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
@@ -19,12 +21,78 @@ def main():
     #cv2.waitKey(0)
     windowSize = 4
     leftFeatures = findInterestRegions(imgL_gry,windowSize)
-    #print(len(leftFeatures))
     rightFeatures =  findInterestRegions(imgR_gry,windowSize)
-    #print(len(rightFeatures))
-    disparityMap = getDisparityMap(rightFeatures,leftFeatures,imgL_gry,imgR_gry,windowSize)
+    if len(leftFeatures) < len(rightFeatures):
+        tImgGry = imgL_gry
+        tImgRGB = imgL
+        cImgGry = imgR_gry
+        cImgRGB = imgR
+        tFeats = leftFeatures
+        cFeats = rightFeatures
+    else:
+        cImgGry = imgL_gry
+        cImgRGB = imgL
+        tImgGry = imgR_gry
+        tImgRGB = imgR
+        tFeats = rightFeatures
+        cFeats = leftFeatures
+    
+    b = 193.001
+    f = 3979.911
+    dOff = 124.343
+    disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize)
     for i in disparityMap:
-        print(i)
+        for j in i:
+            if j != 0:
+                j = b*f/(j+dOff)
+    print("Saving depth data")
+    f = open("depthMap.txt","w")
+    for i in disparityMap:
+        f.write(str(i))
+    f.close()
+    #for i in disparityMap:
+        #print(i)
+    print("Scanning finished")
+    print("generating image")
+    dMap = np.asarray(disparityMap,dtype=np.float32)
+    bL,gL,rL = cv2.split(imgL)
+    imgL_rgb = cv2.merge((rL,gL,bL))
+    #bR,gR,rR = cv2.split(imgR)
+    #imgR_rgb = cv2.merge((rR,gR,bR))
+    
+    #xx, yy = np.mgrid[0:imgL_rgb.shape[0],0:imgL_rgb.shape[1]]   
+    fig = plt.figure()   
+    ax = plt.axes(projection='3d')
+    ax.set_ylabel('Z axis')
+    ax.set_xlabel('X axis')
+    ax.set_zlabel('Y axis')
+    ax.set_title("Bicycle in 3D")
+    #imageArray = np.asarray(imgL_gry)
+    #distanceArray = np.vectorize(disp)
+    for col in range(0,len(dMap)):
+        for row in range(0,len(dMap[0])):
+            dist = dMap[col][row]
+            r,g,b = tImgRGB[col][row]
+            plt.plot([len(dMap) - row],[dist],[len(dMap[0]) - col],marker = "o", color=(b/255,g/255,r/255), markersize = 0.5)
+    
+
+    
+    while True:
+        azim = int(input("axim:"))
+        elev = int(input("elev:"))
+        ax.view_init(azim=azim,elev = elev)
+        
+        plt.savefig(str(azim) + "_" + str(elev))
+        cont = input("continue?:")
+        if cont == "no":
+            break
+        
+    #ax.plot_surface(xx,yy,disp)
+    #plt.show()
+    
+        
+    
+    
     #print(disparityMap)
     
 #img[y_cord][x_cord]  
@@ -35,12 +103,14 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
         
 
     #print(len(disparityMap[0]))    
+    cnt = 0
     for i in features1:
+        print(str(len(features1)- cnt) + " features left to analyze")
         maxCC = 0
         matchingCords = [-1,-1]
         f1 = getIntensityAvg(img1, windowSize, i[0], i[1])
         for j in features2:
-            if abs(j[1]-i[1]) < 11:
+            if abs(j[1]-i[1]) < 5:
                    newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
                    if newCC > maxCC:
                        maxCC = newCC
@@ -53,6 +123,7 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
             for m in range(i[0],i[0] + windowSize,1):
                 disparityMap[k][m] = dx
                 None
+        cnt = cnt +1
                 
     return disparityMap
        
@@ -60,43 +131,91 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
     
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
+    print("Scanning Regions")
     threshold = 50000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
     I = 0
     x,y = windowSize,windowSize
+    h = len(img)
+    w = len(img[0])
+    iArray = np.zeros((w,w))
     while(True):
-        I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
-        I = 0
+        shiftDown = False
+        #I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
+        #I = 0
         if (x+windowSize*2 >= len(img[y])):
             x = 0
-            y+=windowSize
+            y+=1
+            print("y is " +  str(y))
+            shiftDown = True
         if (y+windowSize*2 >= len(img)):
             break
         #print("x is " + str(x))
         #print("y is " + str(y))
-        I0 = getInterest(img,windowSize,x-windowSize,y-windowSize)
-        I1 = getInterest(img,windowSize,x,y-windowSize)
-        I2 = getInterest(img,windowSize,x+windowSize,y-windowSize)
-        I3 = getInterest(img,windowSize,x-windowSize,y)
-        I = getInterest(img,windowSize,x,y)
-        I4 = getInterest(img,windowSize,x+windowSize,y)
-        I5 = getInterest(img,windowSize,x-windowSize,y+windowSize)
-        I6 = getInterest(img,windowSize,x,y+windowSize)
-        I7 = getInterest(img,windowSize,x+windowSize,y+windowSize)
+        I0 = iArray[y-1][x-1]
+        I1 = iArray[y-1][x]
+        I2 = iArray[y-1][x+1]
+        I3 = iArray[y][x-1]
+        I = iArray[y][x]
+        I4 = iArray[y-1][x+1]
+        I5 = iArray[y-1][x]
+        I6 = iArray[y-1][x]
+        I7 = iArray[y-1][x]
+        
+        if I0 == 0:
+            I0 = getInterest(img,windowSize,x-1,y-1)
+            iArray[y-1][x-1] = I0
+            
+        if I1 == 0:
+            I1 = getInterest(img,windowSize,x,y-1)
+            iArray[y-1][x] = I1
+            
+        if I2 == 0:
+            I2 = getInterest(img,windowSize,x+1,y-1)
+            iArray[y-1][x+1] = I2
+            
+        if I3 == 0:    
+            I3 = getInterest(img,windowSize,x-1,y)
+            iArray[x-1][y] = I3
+
+        if I == 0:    
+            I = getInterest(img,windowSize,x,y)
+            iArray[x][y] = I
+            
+     
+      #  if x%100 == 0:
+       #     print("x is "  +str(x) + "and y is" + str(y))
+            
+        if I4 == 0:    
+            I4 = getInterest(img,windowSize,x+1,y)
+            iArray[x+1][y] = I4
+        
+        if I5 == 0:
+            I5 = getInterest(img,windowSize,x-1,y+1)
+            iArray[x-1][y+1] = I5
+       
+        if I6 == 0:
+            I6 = getInterest(img,windowSize,x,y+1)
+            iArray[x][y+1] = I6
+            
+        if I7 == 0:
+            I7 = getInterest(img,windowSize,x+1,y+1)
+            iArray[x+1][y+1] = I7
         #print("i is" + str(I))
         if I == max(I0,I1,I2,I3,I4,I5,I6,I7,I):     
             if I >= threshold:
                 #regions+=[(x+windowSize)/2,(y+windowSize)/2]
                 regions+=[[x,y]]
             
-        x = x+windowSize
+        x = x+1
     #print(regions)        
     
     return regions
 
 def getInterest(img,windowSize, x,y):
+
     I1,I2,I3,I4 = 0,0,0,0
     for j in range(x,x+windowSize):
             for i in range(y,y+windowSize):

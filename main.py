@@ -90,7 +90,7 @@ def main():
     dOff = 124.343
     
     try:
-        f = open("fuckMyAss.txt")
+        f = open("purposeFail")
         f = open("depthMap.txt")
         #print("scanning depthMap.txt")
         data = csv.reader(f, delimiter = ',')
@@ -112,7 +112,9 @@ def main():
         for i in disparityMap:
             for j in i:
                 if j != 0:
+                    #print("prev:" + str(j))
                     j = b*f/(j+dOff)
+                    #print("new:" + str(j))
      
         f = open("depthMap.txt","w")
         for i in disparityMap:
@@ -165,14 +167,25 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
     for i in range(0,len(img1)):
         disparityMap = disparityMap + [np.zeros(len(img1[i]))]
         
-
+    
     #print(len(disparityMap[0]))    
     cnt = 0
     for i in features1:
-        print(str(len(features1)- cnt) + " features left to analyze")
+        if cnt%100 == 0:
+            print(str(len(features1)- cnt) + " features left to analyze")
         maxCC = 0
         matchingCords = [-1,-1]
-        f1 = getIntensityAvg(img1, windowSize, i[0], i[1])
+        
+        h = len(img1)
+        w = len(img1[0])
+        i1Matrix = np.zeros((h,w))
+        f1 = 0
+        for k in range(i[0],i[0]+windowSize):
+            if i1Matrix[i[1]][k] == 0:
+                i1Matrix[i[1]][k] = getIntensityCol(img1, windowSize, k, i[1])
+            f1+=i1Matrix[i[1]][k]
+        f1 = f1/windowSize
+        
         for j in features2:
             if abs(j[1]-i[1]) < 5:
                    newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
@@ -297,11 +310,32 @@ def getCC(imgL,imgR,windowSize, xL,yL,xR,yR,f1):
     sumDenomenator  = 0
     sumF1 = 0
     sumF2 = 0
+    h = len(imgL)
+    w = len(imgL[0])
+    i1Matrix = np.zeros((h,w))
+    i2Matrix = np.zeros((h,w))
     if f1==None:
-        f1Avg = getIntensityAvg(imgL,windowSize,xL,yL)
+        f1 = 0
+        for i in range(xL,xL+windowSize):
+            if i1Matrix[yL][i] == 0:
+                i1Matrix[yL][i] = getIntensityCol(imgL, windowSize, i, yL)
+            f1+=i1Matrix[yL][i]
+        f1 = f1/windowSize
+        f1Avg = f1
+            
+        #f1Avg = getIntensityAvg(imgL,windowSize,xL,yL)
     else:
         f1Avg = f1
-    f2Avg = getIntensityAvg(imgR,windowSize,xR,yR)
+        
+    
+    f2Avg= 0
+    for i in range(xR,xR+windowSize):
+        if i2Matrix[yR][i] == 0:
+                i2Matrix[yR][i] = getIntensityCol(imgR, windowSize,i,yR)
+        f2Avg += i2Matrix[yR][i]
+    f2Avg = f2Avg/windowSize
+    
+    #f2Avg = getIntensityAvg(imgR,windowSize,xR,yR)
     for i in range(0,windowSize):
         
         for j in range(0,windowSize):
@@ -312,11 +346,17 @@ def getCC(imgL,imgR,windowSize, xL,yL,xR,yR,f1):
             sumNumerator += temp
     sumDenomenator = np.sqrt(sumF1*sumF2)
     CC = sumNumerator/sumDenomenator
-    #print(type(sumNumerator))
-    #print("CC is " + str(CC))
     
     
     return CC
+
+def getIntensityCol(img,windowSize,x,y):
+    avg = 0
+    numPixels = windowSize
+    for j in range(y,y+windowSize):
+        avg = avg + img[j][x]
+    avg = avg/numPixels
+    return avg
 
 def getIntensityAvg(img,windowSize,x,y):
     avg = 0

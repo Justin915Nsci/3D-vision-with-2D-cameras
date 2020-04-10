@@ -1,27 +1,75 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  1 23:19:52 2020
-@author: justi
-"""
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+import csv
 
 
 def main():
-    imgL = cv2.imread('pics/im0.png',1)
-    imgR = cv2.imread('pics/im1.png',1)
-    #imgL = cv2.imread('pics/im0.jpg',1)
-    #imgR = cv2.imread('pics/im1.jpg',1)
+    #imgL = cv2.imread('pics/im0.png',1)
+    #imgR = cv2.imread('pics/im1.png',1)
+    imgL = cv2.imread('pics/im0.jpg',1)
+    imgR = cv2.imread('pics/im1.jpg',1)
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
     #cv2.imshow('imgL_gry',imgL_gry)
     #cv2.waitKey(0)
     windowSize = 4
-    leftFeatures = findInterestRegions(imgL_gry,windowSize)
-    rightFeatures =  findInterestRegions(imgR_gry,windowSize)
+    try:
+        f = open("lFeats.txt")
+        print("scanning lFeats.txt")
+        data = csv.reader(f, delimiter = ',')
+        #print("sucessful csv scan for lFeats")
+        leftFeatures= []
+        for row in data:
+            temp = []
+            for i in row:
+                try:
+                    temp = temp + [int(i)]
+                except:
+                    None
+            leftFeatures = leftFeatures + [temp]
+        #print(leftFeatures)
+        f.close()
+    except:
+        print("lFeats.txt not found, saving new leftFeatures data.")
+        leftFeatures = findInterestRegions(imgL_gry,windowSize)
+        f = open("lFeats.txt","w")
+        for i in leftFeatures:
+            for j in i:
+                f.write(str(j))
+                f.write(",")
+            f.write("\n")
+        f.close()
+    
+            
+    try:
+        f = open("rFeats.txt")
+        print("scanning rFeats.txt")
+        data = csv.reader(f, delimiter = ',')
+        rightFeatures= []
+        for row in data:
+            temp = []
+            for i in row:
+                try:
+                    temp = temp + [int(i)]
+                except:
+                    None
+            rightFeatures = rightFeatures + [temp]
+        #print(rightFeatures)
+        f.close()
+    except:
+        print("rFeats.txt not found, saving new leftFeatures data.")
+        rightFeatures = findInterestRegions(imgR_gry,windowSize)
+        f = open("rFeats.txt","w")
+        for i in rightFeatures:
+            for j in i:
+                f.write(str(j))
+                f.write(",")
+            f.write("\n")
+        f.close()
+    
     if len(leftFeatures) < len(rightFeatures):
         tImgGry = imgL_gry
         tImgRGB = imgL
@@ -40,20 +88,44 @@ def main():
     b = 193.001
     f = 3979.911
     dOff = 124.343
-    disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize)
-    for i in disparityMap:
-        for j in i:
-            if j != 0:
-                j = b*f/(j+dOff)
-    print("Saving depth data")
-    f = open("depthMap.txt","w")
-    for i in disparityMap:
-        f.write(str(i))
-    f.close()
-    #for i in disparityMap:
-        #print(i)
+    
+    try:
+        f = open("fuckMyAss.txt")
+        f = open("depthMap.txt")
+        #print("scanning depthMap.txt")
+        data = csv.reader(f, delimiter = ',')
+        disparityMap = []
+        for row in data:
+            temp = []
+            for i in row:
+                try:
+                    temp = temp + [float(i)]
+                except:
+                    None
+            disparityMap = disparityMap + [temp]
+        #print(rightFeatures)
+        f.close()
+        
+    except:
+        print("depthMap.txt not found, saving new depthMap data.")
+        disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize)
+        for i in disparityMap:
+            for j in i:
+                if j != 0:
+                    j = b*f/(j+dOff)
+     
+        f = open("depthMap.txt","w")
+        for i in disparityMap:
+            for j in i:
+                f.write(str(j))
+                f.write(",")
+            f.write("\n")
+        f.close()
+    
+
     print("Scanning finished")
     print("generating image")
+    #print(disparityMap)
     dMap = np.asarray(disparityMap,dtype=np.float32)
     bL,gL,rL = cv2.split(imgL)
     imgL_rgb = cv2.merge((rL,gL,bL))
@@ -86,14 +158,6 @@ def main():
         cont = input("continue?:")
         if cont == "no":
             break
-        
-    #ax.plot_surface(xx,yy,disp)
-    #plt.show()
-    
-        
-    
-    
-    #print(disparityMap)
     
 #img[y_cord][x_cord]  
 def getDisparityMap(features1,features2,img1,img2,windowSize):

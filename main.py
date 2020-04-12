@@ -201,7 +201,7 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
                    newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
                    if newCC > maxCC:
                        maxCC = newCC
-                       matchingCords = [j[1],j[0]]
+                       matchingCords = [j[0],j[1]]
         dx = abs(i[0]-matchingCords[0])
         #print("dx is " + str(dx))
         

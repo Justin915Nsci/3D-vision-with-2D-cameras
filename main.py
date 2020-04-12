@@ -6,10 +6,10 @@ import csv
 
 
 def main():
-    imgL = cv2.imread('pics/im0.png',1)
-    imgR = cv2.imread('pics/im1.png',1)
-    #imgL = cv2.imread('pics/im0.jpg',1)
-    #imgR = cv2.imread('pics/im1.jpg',1)
+    #imgL = cv2.imread('pics/im0.png',1)
+    #imgR = cv2.imread('pics/im1.png',1)
+    imgL = cv2.imread('pics/im0.jpg',1)
+    imgR = cv2.imread('pics/im1.jpg',1)
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
@@ -250,50 +250,47 @@ def findInterestRegions(img,windowSize):
         I5 = iArray[y-1][x]
         I6 = iArray[y-1][x]
         I7 = iArray[y-1][x]
-        
-        if I0 == 0:
-            I0 = getInterest(img,windowSize,x-1,y-1)
-            iArray[y-1][x-1] = I0
-            
-        if I1 == 0:
-            I1 = getInterest(img,windowSize,x,y-1)
-            iArray[y-1][x] = I1
-            
-        if I2 == 0:
-            I2 = getInterest(img,windowSize,x+1,y-1)
-            iArray[y-1][x+1] = I2
-            
-        if I3 == 0:    
-            I3 = getInterest(img,windowSize,x-1,y)
-            iArray[y][x-1] = I3
-
         if I == 0:    
             I = getInterest(img,windowSize,x,y)
             iArray[y][x] = I
-            
-     
-      #  if x%100 == 0:
-       #     print("x is "  +str(x) + "and y is" + str(y))
-            
-        if I4 == 0:    
-            I4 = getInterest(img,windowSize,x+1,y)
-            iArray[y][x+1] = I4
+        print("I is " + str(I))
         
-        if I5 == 0:
-            I5 = getInterest(img,windowSize,x-1,y+1)
-            iArray[y+1][x-1] = I5
-       
-        if I6 == 0:
-            I6 = getInterest(img,windowSize,x,y+1)
-            iArray[y+1][x] = I6
+        if I<=threshold:
+            None
+        else:      
+            if I0 == 0:
+                I0 = getInterest(img,windowSize,x-1,y-1)
+                iArray[y-1][x-1] = I0
             
-        if I7 == 0:
-            I7 = getInterest(img,windowSize,x+1,y+1)
-            iArray[y+1][x+1] = I7
-        #print("i is" + str(I))
-        if I == max(I0,I1,I2,I3,I4,I5,I6,I7,I):     
-            if I >= threshold:
-                #regions+=[(x+windowSize)/2,(y+windowSize)/2]
+            if I1 == 0:
+                I1 = getInterest(img,windowSize,x,y-1)
+                iArray[y-1][x] = I1
+            
+            if I2 == 0:
+                I2 = getInterest(img,windowSize,x+1,y-1)
+                iArray[y-1][x+1] = I2
+            
+            if I3 == 0:    
+                I3 = getInterest(img,windowSize,x-1,y)
+                iArray[y][x-1] = I3
+            
+            if I4 == 0:    
+                I4 = getInterest(img,windowSize,x+1,y)
+                iArray[y][x+1] = I4
+        
+            if I5 == 0:
+                I5 = getInterest(img,windowSize,x-1,y+1)
+                iArray[y+1][x-1] = I5
+       
+            if I6 == 0:
+                I6 = getInterest(img,windowSize,x,y+1)
+                iArray[y+1][x] = I6
+            
+            if I7 == 0:
+                I7 = getInterest(img,windowSize,x+1,y+1)
+                iArray[y+1][x+1] = I7
+                #print("i is" + str(I))
+            if I == max(I0,I1,I2,I3,I4,I5,I6,I7,I):     
                 regions+=[[x,y]]
             
         x = x+1       

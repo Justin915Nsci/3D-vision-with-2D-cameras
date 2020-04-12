@@ -100,7 +100,7 @@ def main():
     dOff = 124.343
     
     try:
-        #f = open("purposeFail")
+        f = open("purposeFail")
         f = open("depthMap.txt")
         #print("scanning depthMap.txt")
         data = csv.reader(f, delimiter = ',')
@@ -118,7 +118,7 @@ def main():
         
     except:
         print("depthMap.txt not found, saving new depthMap data.")
-        disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize)
+        disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize,tImgRGB)
         for i in disparityMap:
             for j in i:
                 if j != 0:
@@ -172,7 +172,7 @@ def main():
             break
     
 #img[y_cord][x_cord]  
-def getDisparityMap(features1,features2,img1,img2,windowSize):
+def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
     disparityMap = []
     for i in range(0,len(img1)):
         disparityMap = disparityMap + [np.zeros(len(img1[i]))]
@@ -181,10 +181,12 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
     #print(len(disparityMap[0]))    
     cnt = 0
     for i in features1:
-        if cnt%100 == 0:
+        stack = []
+        #if cnt%100 == 0:
+        if cnt%1 == 0:
             print(str(len(features1)- cnt) + " features left to analyze")
         maxCC = 0
-        matchingCords = [-1,-1]
+        mC = [-1,-1] #stores coordinates for matching conjugate pair
         
         h = len(img1)
         w = len(img1[0])
@@ -201,25 +203,108 @@ def getDisparityMap(features1,features2,img1,img2,windowSize):
                    newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
                    if newCC > maxCC:
                        maxCC = newCC
-                       matchingCords = [j[0],j[1]]
-        dx = abs(i[0]-matchingCords[0])
-        #print("dx is " + str(dx))
+                       mC = [j[0],j[1]]
+        dx = abs(i[0]-mC[0])
+        #print("mC is" + str(mC))
         
-        for  k in range(i[1],i[1] + windowSize,1):
-           # print("in k loop")
-            for m in range(i[0],i[0] + windowSize,1):
-                disparityMap[k][m] = dx
-                None
+        disparityMap[i[1]][i[0]] = dx
+        
+        r,g,b = tImgRGB[i[1]][i[0]]
+        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1]-1,r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0],i[1]-1,r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1]-1,r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1],r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1],r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1]+1,r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0],i[1]+1,r,g,b,dx)
+        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1]+1,r,g,b,dx)
+        stack.append([i[0]-1,i[1]-1])
+        stack.append([i[0],i[1]-1])
+        stack.append([i[0]+1,i[1]-1])
+        stack.append([i[0]-1,i[1]])
+        stack.append([i[0]+1,i[1]])
+        stack.append([i[0]-1,i[1]+1])
+        stack.append([i[0],i[1]+1])
+        stack.append([i[0]+1,i[1]+1])
+        while True:
+            if len(stack) == 0:
+                break
+            cords = stack.pop()
+            fillDepthMap(disparityMap,tImgRGB,cords[0],cords[1],r,g,b,dx,stack)
+            #print("stack size:" + str(len(stack)))
+        
         cnt = cnt +1
                 
     return disparityMap
-       
+     
+#apply this function to all pixels around interest point
+def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
+    #print("current cords:" + str(x) + "," + str(y))
+    #print("d is " + str(d))
+
+    if d < 20:
+        return False
+    threshold = 70
+	#check to see if these x and y coords are worth analyzing
+    valid = False
+    try:
+        if(dMap[y][x]==0):
+			#print("is valid")
+            valid = True
+    except:
+        print(str(x) + "," + str(y) + "are invalid coordinates")
+
+    if valid ==False:
+        #print("depth at " + str(x) + "," + str(y) + " is already found")
+        return False
+    
+    
+    imgR,imgG,imgB = img[y][x]
+    if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):
+        print([abs(imgR-r),abs(imgG-g),abs(imgB-b)])
+        valid = False
+        return False
+
+    else:
+        dMap[y][x] = d
+    if valid == False:
+        return False
+    else:
+    #fillDepthMap(dMap,img,x-1,y-1,r,g,b,d)
+    #fillDepthMap(dMap,img,x,y-1,r,g,b,d)
+    #fillDepthMap(dMap,img,x+1,y-1,r,g,b,d)
+    #fillDepthMap(dMap,img,x-1,y,r,g,b,d)
+    #fillDepthMap(dMap,img,x+1,y,r,g,b,d)
+    #fillDepthMap(dMap,img,x-1,y+1,r,g,b,d)
+    #fillDepthMap(dMap,img,x,y+1,r,g,b,d)
+    #fillDepthMap(dMap,img,x+1,y+1,r,g,b,d)
+
+        stack.append([x-1,y-1])
+        stack.append([x,y-1])
+
+        stack.append([x+1,y-1])
+     
+        stack.append([x-1,y])
+
+        stack.append([x+1,y])
+      
+        stack.append([x-1,y+1]) 
+
+        stack.append([x,y+1])
+
+        stack.append([x+1,y+1])
+        
+    return True
+
+
+
+
 #Here img is a 2d array   
     
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
     print("Scanning Regions")
-    threshold = 50000
+    threshold = 1300000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
@@ -253,7 +338,7 @@ def findInterestRegions(img,windowSize):
         if I == 0:    
             I = getInterest(img,windowSize,x,y)
             iArray[y][x] = I
-        print("I is " + str(I))
+        #print("I is " + str(I))
         
         if I<=threshold:
             None

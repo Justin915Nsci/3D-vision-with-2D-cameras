@@ -6,23 +6,26 @@ import csv
 
 
 def main():
-    #imgL = cv2.imread('pics/im0.png',1)
-    #imgR = cv2.imread('pics/im1.png',1)
-    imgL = cv2.imread('pics/im0.jpg',1)
-    imgR = cv2.imread('pics/im1.jpg',1)
+    imgL = cv2.imread('pics/im0.png',1)
+    imgR = cv2.imread('pics/im1.png',1)
+    #imgL = cv2.imread('pics/im0.jpg',1)
+    #imgR = cv2.imread('pics/im1.jpg',1)
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
     #cv2.imshow('imgL_gry',imgL_gry)
     #cv2.waitKey(0)
-    windowSize = 4
+    windowSize = 7
     try:
         f = open("lFeats.txt")
         print("scanning lFeats.txt")
         data = csv.reader(f, delimiter = ',')
         #print("sucessful csv scan for lFeats")
         leftFeatures= []
+        cnt = 0
         for row in data:
+            if cnt%100 == 0:
+                print(cnt)
             temp = []
             for i in row:
                 try:
@@ -30,17 +33,20 @@ def main():
                 except:
                     None
             leftFeatures = leftFeatures + [temp]
+            cnt = cnt + 1
         #print(leftFeatures)
         f.close()
     except:
         print("lFeats.txt not found, saving new leftFeatures data.")
         leftFeatures = findInterestRegions(imgL_gry,windowSize)
         f = open("lFeats.txt","w")
+       
         for i in leftFeatures:
             for j in i:
                 f.write(str(j))
                 f.write(",")
             f.write("\n")
+            
         f.close()
     
             
@@ -49,7 +55,10 @@ def main():
         print("scanning rFeats.txt")
         data = csv.reader(f, delimiter = ',')
         rightFeatures= []
+        cnt = 0
         for row in data:
+            if cnt%100 == 0:
+                print(cnt)
             temp = []
             for i in row:
                 try:
@@ -57,6 +66,7 @@ def main():
                 except:
                     None
             rightFeatures = rightFeatures + [temp]
+            cnt= cnt +1
         #print(rightFeatures)
         f.close()
     except:
@@ -90,7 +100,7 @@ def main():
     dOff = 124.343
     
     try:
-        f = open("purposeFail")
+        #f = open("purposeFail")
         f = open("depthMap.txt")
         #print("scanning depthMap.txt")
         data = csv.reader(f, delimiter = ',')
@@ -217,7 +227,7 @@ def findInterestRegions(img,windowSize):
     x,y = windowSize,windowSize
     h = len(img)
     w = len(img[0])
-    iArray = np.zeros((w,w))
+    iArray = np.zeros((h,w))
     while(True):
         shiftDown = False
         #I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
@@ -255,11 +265,11 @@ def findInterestRegions(img,windowSize):
             
         if I3 == 0:    
             I3 = getInterest(img,windowSize,x-1,y)
-            iArray[x-1][y] = I3
+            iArray[y][x-1] = I3
 
         if I == 0:    
             I = getInterest(img,windowSize,x,y)
-            iArray[x][y] = I
+            iArray[y][x] = I
             
      
       #  if x%100 == 0:
@@ -267,27 +277,26 @@ def findInterestRegions(img,windowSize):
             
         if I4 == 0:    
             I4 = getInterest(img,windowSize,x+1,y)
-            iArray[x+1][y] = I4
+            iArray[y][x+1] = I4
         
         if I5 == 0:
             I5 = getInterest(img,windowSize,x-1,y+1)
-            iArray[x-1][y+1] = I5
+            iArray[y+1][x-1] = I5
        
         if I6 == 0:
             I6 = getInterest(img,windowSize,x,y+1)
-            iArray[x][y+1] = I6
+            iArray[y+1][x] = I6
             
         if I7 == 0:
             I7 = getInterest(img,windowSize,x+1,y+1)
-            iArray[x+1][y+1] = I7
+            iArray[y+1][x+1] = I7
         #print("i is" + str(I))
         if I == max(I0,I1,I2,I3,I4,I5,I6,I7,I):     
             if I >= threshold:
                 #regions+=[(x+windowSize)/2,(y+windowSize)/2]
                 regions+=[[x,y]]
             
-        x = x+1
-    #print(regions)        
+        x = x+1       
     
     return regions
 

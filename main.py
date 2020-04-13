@@ -99,6 +99,7 @@ def main():
     f = 3979.911
     dOff = 124.343
     
+    maxD = 0
     try:
         f = open("purposeFail")
         f = open("depthMap.txt")
@@ -110,6 +111,8 @@ def main():
             for i in row:
                 try:
                     temp = temp + [float(i)]
+                    if float(i) >maxD:
+                        maxD = float(i)
                 except:
                     None
             disparityMap = disparityMap + [temp]
@@ -119,11 +122,13 @@ def main():
     except:
         print("depthMap.txt not found, saving new depthMap data.")
         disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize,tImgRGB)
-        for i in disparityMap:
-            for j in i:
-                if j != 0:
+        for i in range(0,len(disparityMap)):
+            for j in range(0,len(disparityMap[i])):
+                if disparityMap[i][j] != 0:
                     #print("prev:" + str(j))
-                    j = b*f/(j+dOff)
+                    disparityMap[i][j] = b*f/(disparityMap[i][j]+dOff)
+                    if disparityMap[i][j] >maxD:
+                        maxD = disparityMap[i][j]
                     #print("new:" + str(j))
      
         f = open("depthMap.txt","w")
@@ -157,7 +162,11 @@ def main():
         for row in range(0,len(dMap[0])):
             dist = dMap[col][row]
             r,g,b = tImgRGB[col][row]
-            plt.plot([len(dMap) - row],[dist],[len(dMap[0]) - col],marker = "o", color=(b/255,g/255,r/255), markersize = 0.5)
+            if dist == 0:
+                d = 0
+            else:
+                d = maxD-dist
+            plt.plot([len(dMap) - row],[d],[len(dMap[0]) - col],marker = "o", color=(b/255,g/255,r/255), markersize = 0.5)
     
 
     
@@ -199,7 +208,7 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
         f1 = f1/windowSize
         
         for j in features2:
-            if abs(j[1]-i[1]) < 5:
+            if abs(j[1]-i[1]) < 4:
                    newCC = getCC(img1,img2,windowSize,i[0],i[1],j[0],j[1],f1)
                    if newCC > maxCC:
                        maxCC = newCC
@@ -210,6 +219,7 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
         disparityMap[i[1]][i[0]] = dx
         
         r,g,b = tImgRGB[i[1]][i[0]]
+        #print("color OG:" + str(r) +"," + str(g) + "," + str(b))
         #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1]-1,r,g,b,dx)
         #fillDepthMap(disparityMap,tImgRGB,i[0],i[1]-1,r,g,b,dx)
         #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1]-1,r,g,b,dx)
@@ -241,10 +251,9 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
 def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
     #print("current cords:" + str(x) + "," + str(y))
     #print("d is " + str(d))
-
     if d < 20:
         return False
-    threshold = 70
+    threshold = 120
 	#check to see if these x and y coords are worth analyzing
     valid = False
     try:
@@ -260,24 +269,28 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
     
     
     imgR,imgG,imgB = img[y][x]
-    if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):
-        print([abs(imgR-r),abs(imgG-g),abs(imgB-b)])
-        valid = False
+    tally = 0
+    if abs(imgR-r)>threshold:
+        tally = tally + 1
+    if abs(imgB-b)>threshold:
+        tally = tally + 1    
+    if abs(imgG-g)>threshold:
+        tally = tally + 1
+    if tally >0:
         return False
+        
+    #if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):
+        #print([abs(imgR-r),abs(imgG-g),abs(imgB-b)])
+     #   print("color here:" + str(imgR) +"," + str(imgG) + "," + str(imgB))
+      #  print("color should be:" + str(r) +"," + str(g) + "," + str(b))
+       # valid = False
+        #return False
 
     else:
         dMap[y][x] = d
     if valid == False:
         return False
     else:
-    #fillDepthMap(dMap,img,x-1,y-1,r,g,b,d)
-    #fillDepthMap(dMap,img,x,y-1,r,g,b,d)
-    #fillDepthMap(dMap,img,x+1,y-1,r,g,b,d)
-    #fillDepthMap(dMap,img,x-1,y,r,g,b,d)
-    #fillDepthMap(dMap,img,x+1,y,r,g,b,d)
-    #fillDepthMap(dMap,img,x-1,y+1,r,g,b,d)
-    #fillDepthMap(dMap,img,x,y+1,r,g,b,d)
-    #fillDepthMap(dMap,img,x+1,y+1,r,g,b,d)
 
         stack.append([x-1,y-1])
         stack.append([x,y-1])
@@ -285,7 +298,6 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
         stack.append([x+1,y-1])
      
         stack.append([x-1,y])
-
         stack.append([x+1,y])
       
         stack.append([x-1,y+1]) 
@@ -304,7 +316,7 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
     print("Scanning Regions")
-    threshold = 1300000
+    threshold = 1500000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
@@ -379,7 +391,7 @@ def findInterestRegions(img,windowSize):
                 regions+=[[x,y]]
             
         x = x+1       
-    
+    regions.reverse()
     return regions
 
 def getInterest(img,windowSize, x,y):
@@ -432,7 +444,7 @@ def getCC(imgL,imgR,windowSize, xL,yL,xR,yR,f1):
         for j in range(0,windowSize):
             sumF1 += (imgL[yL+i][xL+j]-f1Avg)**2
             sumF2 += (imgR[yR+i][xR+j]-f2Avg)**2
-            temp = (imgL[yL+i][xL+j]-f1Avg)*(imgR[yR+i][xR+i]-f2Avg)
+            temp = (imgL[yL+i][xL+j]-f1Avg)*(imgR[yR+i][xR+j]-f2Avg)
 
             sumNumerator += temp
     sumDenomenator = np.sqrt(sumF1*sumF2)

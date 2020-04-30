@@ -241,7 +241,7 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
                 break
             cords = stack.pop()
             fillDepthMap(disparityMap,tImgRGB,cords[0],cords[1],r,g,b,dx,stack)
-            #print("stack size:" + str(len(stack)))
+            print("stack size:" + str(len(stack)))
         
         cnt = cnt +1
                 
@@ -251,9 +251,9 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
 def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
     #print("current cords:" + str(x) + "," + str(y))
     #print("d is " + str(d))
-    if d < 20:
-        return False
-    threshold = 120
+    if d < 30:
+       return False
+    threshold = 50
 	#check to see if these x and y coords are worth analyzing
     valid = False
     try:
@@ -276,7 +276,7 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
         tally = tally + 1    
     if abs(imgG-g)>threshold:
         tally = tally + 1
-    if tally >0:
+    if tally >1:
         return False
         
     #if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):
@@ -316,7 +316,7 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
     print("Scanning Regions")
-    threshold = 1500000
+    threshold = 1400000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 

@@ -219,15 +219,6 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
         disparityMap[i[1]][i[0]] = dx
         
         r,g,b = tImgRGB[i[1]][i[0]]
-        #print("color OG:" + str(r) +"," + str(g) + "," + str(b))
-        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1]-1,r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0],i[1]-1,r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1]-1,r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1],r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1],r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0]-1,i[1]+1,r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0],i[1]+1,r,g,b,dx)
-        #fillDepthMap(disparityMap,tImgRGB,i[0]+1,i[1]+1,r,g,b,dx)
         stack.append([i[0]-1,i[1]-1])
         stack.append([i[0],i[1]-1])
         stack.append([i[0]+1,i[1]-1])
@@ -253,7 +244,7 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
     #print("d is " + str(d))
     if d < 30:
        return False
-    threshold = 50
+    threshold = 100
 	#check to see if these x and y coords are worth analyzing
     valid = False
     try:
@@ -270,13 +261,16 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
     
     imgR,imgG,imgB = img[y][x]
     tally = 0
-    if abs(imgR-r)>threshold:
-        tally = tally + 1
-    if abs(imgB-b)>threshold:
-        tally = tally + 1    
-    if abs(imgG-g)>threshold:
-        tally = tally + 1
-    if tally >1:
+    #if abs(imgR-r)>threshold:
+    #    tally = tally + 1
+    #if abs(imgB-b)>threshold:
+    #    tally = tally + 1    
+    #if abs(imgG-g)>threshold:
+    #    tally = tally + 1
+    #if tally >1:
+    #    return False
+    diff = abs(imgR-r) + abs(imgB-b) + abs(imgG-g)
+    if diff>threshold:
         return False
         
     #if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):

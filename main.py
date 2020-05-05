@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May  4 14:28:10 2020
+
+@author: justi
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Fri May  1 21:52:06 2020
+
+@author: justi
+"""
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -13,9 +26,11 @@ def main():
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
+    imgL_hsv = cv2.cvtColor(imgL,cv2.COLOR_BGR2HSV)
+    imgR_hsv = cv2.cvtColor(imgR,cv2.COLOR_BGR2HSV)
     #cv2.imshow('imgL_gry',imgL_gry)
     #cv2.waitKey(0)
-    windowSize = 7
+    windowSize = 10
     try:
         f = open("lFeats.txt")
         print("scanning lFeats.txt")
@@ -82,15 +97,19 @@ def main():
     
     if len(leftFeatures) < len(rightFeatures):
         tImgGry = imgL_gry
+        tImgHSV = imgL_hsv
         tImgRGB = imgL
         cImgGry = imgR_gry
+        cImgHSV = imgR_hsv
         cImgRGB = imgR
         tFeats = leftFeatures
         cFeats = rightFeatures
     else:
         cImgGry = imgL_gry
+        cImgHSV = imgL_hsv
         cImgRGB = imgL
         tImgGry = imgR_gry
+        tImgHSV = imgR_hsv
         tImgRGB = imgR
         tFeats = rightFeatures
         cFeats = leftFeatures
@@ -121,7 +140,7 @@ def main():
         
     except:
         print("depthMap.txt not found, saving new depthMap data.")
-        disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize,tImgRGB)
+        disparityMap = getDisparityMap(tFeats,cFeats,tImgGry,cImgGry,windowSize,tImgHSV)
         for i in range(0,len(disparityMap)):
             for j in range(0,len(disparityMap[i])):
                 if disparityMap[i][j] != 0:
@@ -181,7 +200,7 @@ def main():
             break
     
 #img[y_cord][x_cord]  
-def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
+def getDisparityMap(features1,features2,img1,img2,windowSize,tImgHSV):
     disparityMap = []
     for i in range(0,len(img1)):
         disparityMap = disparityMap + [np.zeros(len(img1[i]))]
@@ -218,33 +237,34 @@ def getDisparityMap(features1,features2,img1,img2,windowSize,tImgRGB):
         
         disparityMap[i[1]][i[0]] = dx
         
-        r,g,b = tImgRGB[i[1]][i[0]]
-        stack.append([i[0]-1,i[1]-1])
-        stack.append([i[0],i[1]-1])
-        stack.append([i[0]+1,i[1]-1])
-        stack.append([i[0]-1,i[1]])
-        stack.append([i[0]+1,i[1]])
-        stack.append([i[0]-1,i[1]+1])
-        stack.append([i[0],i[1]+1])
-        stack.append([i[0]+1,i[1]+1])
+        hue,sat,value = tImgHSV[i[1]][i[0]]
+        color = getColor(hue,sat,value)
+        print("feature color is " + color)
+        stack.append([i[0]-1,i[1]-1,color])
+        stack.append([i[0],i[1]-1,color])
+        stack.append([i[0]+1,i[1]-1,color])
+        stack.append([i[0]-1,i[1],color])
+        stack.append([i[0]+1,i[1],color])
+        stack.append([i[0]-1,i[1]+1,color])
+        stack.append([i[0],i[1]+1,color])
+        stack.append([i[0]+1,i[1]+1,color])
         while True:
             if len(stack) == 0:
                 break
             cords = stack.pop()
-            fillDepthMap(disparityMap,tImgRGB,cords[0],cords[1],r,g,b,dx,stack)
-            print("stack size:" + str(len(stack)))
+            fillDepthMap(disparityMap,tImgHSV,cords[0],cords[1],cords[2],dx,stack)
+            #print("stack size:" + str(len(stack)))
         
         cnt = cnt +1
                 
     return disparityMap
      
 #apply this function to all pixels around interest point
-def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
-    #print("current cords:" + str(x) + "," + str(y))
-    #print("d is " + str(d))
+def fillDepthMap(dMap,img,x,y,color,d,stack):
+    
     if d < 30:
        return False
-    threshold = 100
+    threshold = 80
 	#check to see if these x and y coords are worth analyzing
     valid = False
     try:
@@ -259,26 +279,12 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
         return False
     
     
-    imgR,imgG,imgB = img[y][x]
-    tally = 0
-    #if abs(imgR-r)>threshold:
-    #    tally = tally + 1
-    #if abs(imgB-b)>threshold:
-    #    tally = tally + 1    
-    #if abs(imgG-g)>threshold:
-    #    tally = tally + 1
-    #if tally >1:
-    #    return False
-    diff = abs(imgR-r) + abs(imgB-b) + abs(imgG-g)
-    if diff>threshold:
+    imgH,imgS,imgV = img[y][x]
+    imgColor = getColor(imgH,imgS,imgV)
+    print("imgColor is " + imgColor)
+    if (imgColor != color):
+        print("image color not equal")
         return False
-        
-    #if(abs(imgR-r)>threshold) or (abs(imgG-g)>threshold) or (abs(imgB-b)>threshold):
-        #print([abs(imgR-r),abs(imgG-g),abs(imgB-b)])
-     #   print("color here:" + str(imgR) +"," + str(imgG) + "," + str(imgB))
-      #  print("color should be:" + str(r) +"," + str(g) + "," + str(b))
-       # valid = False
-        #return False
 
     else:
         dMap[y][x] = d
@@ -286,19 +292,19 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
         return False
     else:
 
-        stack.append([x-1,y-1])
-        stack.append([x,y-1])
+        stack.append([x-1,y-1,color])
+        stack.append([x,y-1,color])
 
-        stack.append([x+1,y-1])
+        stack.append([x+1,y-1,color])
      
-        stack.append([x-1,y])
-        stack.append([x+1,y])
+        stack.append([x-1,y,color])
+        stack.append([x+1,y,color])
       
-        stack.append([x-1,y+1]) 
+        stack.append([x-1,y+1,color]) 
 
-        stack.append([x,y+1])
+        stack.append([x,y+1,color])
 
-        stack.append([x+1,y+1])
+        stack.append([x+1,y+1,color])
         
     return True
 
@@ -310,7 +316,7 @@ def fillDepthMap(dMap,img,x,y,r,g,b,d,stack):
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
     print("Scanning Regions")
-    threshold = 1400000
+    threshold = 1300000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
@@ -337,10 +343,10 @@ def findInterestRegions(img,windowSize):
         I2 = iArray[y-1][x+1]
         I3 = iArray[y][x-1]
         I = iArray[y][x]
-        I4 = iArray[y-1][x+1]
-        I5 = iArray[y-1][x]
-        I6 = iArray[y-1][x]
-        I7 = iArray[y-1][x]
+        I4 = iArray[y][x+1]
+        I5 = iArray[y+1][x-1]
+        I6 = iArray[y+1][x]
+        I7 = iArray[y+1][x+1]
         if I == 0:    
             I = getInterest(img,windowSize,x,y)
             iArray[y][x] = I
@@ -467,4 +473,52 @@ def getIntensityAvg(img,windowSize,x,y):
     avg = avg/numPixels    
     return avg
 
+#returns the color of the pixel in the form of an all lowercase string
+def getColor(hue,sat,value):
+    if value<50:
+        return "black"
+    if sat<50:
+        return "white"
+    if hue<10:
+        return "red"
+    if hue<25:
+        return "orange"
+    if hue<35:
+        return "yellow"
+    if hue<75:
+        return "green"
+    if hue<110:
+        return "blue"
+    if hue<160:
+        return "blue"
+    if hue<180:
+        return "red"
+    
+        
+    # from internet
+    lower_blue = np.array([110,50,50])
+    upper_blue = np.array([130,255,255])
+    ORANGE_MIN = np.array([10, 50, 50],np.uint8)
+    ORANGE_MAX = np.array([25, 255, 255],np.uint8)
+    #my interpretation of graph
+    lower_redOne = np.array([0,50,50])
+    upper_redOne = np.array([9,255,255])
+    lower_yellow = np.array([26,50,50])
+    upper_yellow = np.array([35,255,255])
+    lower_green = np.array([36,50,50])
+    upper_green = np.array([75,255,255])
+    lower_cyan = np.array([76,50,50])
+    upper_cyan = np.array([109,255,255])
+    lower_purple = np.array([131,50,50])
+    upper_purple = np.array([160,255,255])
+    lower_redTwo = np.array([161,50,50])
+    upper_redTwo = np.array([179,255,255])
+    lower_black = np.array([0,0,0])
+    upper_black = np.array([255,255,50])
+    lower_white = np.array([0,0,0])
+    upper_white = np.array([255,50,255])
+    return False 
+
+
 main()
+

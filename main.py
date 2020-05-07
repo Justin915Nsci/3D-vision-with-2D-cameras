@@ -19,10 +19,10 @@ import csv
 
 
 def main():
-    #imgL = cv2.imread('pics/im0.png',1)
-    #imgR = cv2.imread('pics/im1.png',1)
-    imgL = cv2.imread('pics/im0.jpg',1)
-    imgR = cv2.imread('pics/im1.jpg',1)
+    imgL = cv2.imread('pics/im0.png',1)
+    imgR = cv2.imread('pics/im1.png',1)
+    #imgL = cv2.imread('pics/im0.jpg',1)
+    #imgR = cv2.imread('pics/im1.jpg',1)
    
     imgL_gry = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
     imgR_gry = cv2.cvtColor(imgR,cv2.COLOR_BGR2GRAY)
@@ -120,7 +120,7 @@ def main():
     
     maxD = 0
     try:
-        f = open("purposeFail")
+        #f = open("purposeFail")
         f = open("depthMap.txt")
         #print("scanning depthMap.txt")
         data = csv.reader(f, delimiter = ',')
@@ -157,18 +157,25 @@ def main():
                 f.write(",")
             f.write("\n")
         f.close()
-    
+        
+    dMap = np.asarray(disparityMap,dtype=np.float32)
+    f = open("export.txt","w")
+    for col in range(0,len(dMap)):
+        for row in range(0,len(dMap[col])):
+            dist = dMap[col][row]
+            b,g,r = tImgRGB[col][row]
+            if dist == 0:
+                d = 0
+            else:
+                d = maxD - dist
+            f.write(str(len(dMap)-row) + "," + str(d) + "," + str(len(dMap[col])-col) + ",")
+            f.write(str(r) + "x" + str(g) + "," + str(b) + "\n")
 
+    
     print("Scanning finished")
     print("generating image")
     #print(disparityMap)
     dMap = np.asarray(disparityMap,dtype=np.float32)
-    bL,gL,rL = cv2.split(imgL)
-    imgL_rgb = cv2.merge((rL,gL,bL))
-    #bR,gR,rR = cv2.split(imgR)
-    #imgR_rgb = cv2.merge((rR,gR,bR))
-    
-    #xx, yy = np.mgrid[0:imgL_rgb.shape[0],0:imgL_rgb.shape[1]]   
     fig = plt.figure()   
     ax = plt.axes(projection='3d')
     ax.set_ylabel('Z axis')
@@ -185,7 +192,7 @@ def main():
                 d = 0
             else:
                 d = maxD-dist
-            plt.plot([len(dMap) - row],[d],[len(dMap[0]) - col],marker = "o", color=(b/255,g/255,r/255), markersize = 0.5)
+            #plt.plot([len(dMap) - row],[d],[len(dMap[0]) - col],marker = "o", color=(b/255,g/255,r/255), markersize = 0.5)
     
 
     
@@ -316,7 +323,8 @@ def fillDepthMap(dMap,img,x,y,color,d,stack):
 #returns top left pixel of regions
 def findInterestRegions(img,windowSize):
     print("Scanning Regions")
-    threshold = 1300000
+    #threshold = 1300000
+    threshold = 3000000
     regions = []
     #represents grid read left to right top to bot
     I0,I1,I2,I3,I4,I5,I6,I7 = 0,0,0,0,0,0,0,0 
@@ -349,12 +357,12 @@ def findInterestRegions(img,windowSize):
         I7 = iArray[y+1][x+1]
         if I == 0:    
             I = getInterest(img,windowSize,x,y)
-            iArray[y][x] = I
-        #print("I is " + str(I))
+            iArray[y][x] = I    
         
         if I<=threshold:
             None
         else:      
+            #print("I is " + str(I))
             if I0 == 0:
                 I0 = getInterest(img,windowSize,x-1,y-1)
                 iArray[y-1][x-1] = I0
@@ -488,35 +496,12 @@ def getColor(hue,sat,value):
     if hue<75:
         return "green"
     if hue<110:
-        return "blue"
+        return "cyan"
     if hue<160:
         return "blue"
     if hue<180:
         return "red"
     
-        
-    # from internet
-    lower_blue = np.array([110,50,50])
-    upper_blue = np.array([130,255,255])
-    ORANGE_MIN = np.array([10, 50, 50],np.uint8)
-    ORANGE_MAX = np.array([25, 255, 255],np.uint8)
-    #my interpretation of graph
-    lower_redOne = np.array([0,50,50])
-    upper_redOne = np.array([9,255,255])
-    lower_yellow = np.array([26,50,50])
-    upper_yellow = np.array([35,255,255])
-    lower_green = np.array([36,50,50])
-    upper_green = np.array([75,255,255])
-    lower_cyan = np.array([76,50,50])
-    upper_cyan = np.array([109,255,255])
-    lower_purple = np.array([131,50,50])
-    upper_purple = np.array([160,255,255])
-    lower_redTwo = np.array([161,50,50])
-    upper_redTwo = np.array([179,255,255])
-    lower_black = np.array([0,0,0])
-    upper_black = np.array([255,255,50])
-    lower_white = np.array([0,0,0])
-    upper_white = np.array([255,50,255])
     return False 
 
 
